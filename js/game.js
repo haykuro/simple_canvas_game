@@ -1,130 +1,195 @@
-// Create the canvas
-var canvas = document.createElement("canvas");
-var ctx = canvas.getContext("2d");
-canvas.width = 512;
-canvas.height = 480;
-document.body.appendChild(canvas);
+(function () {
+	"use strict";
 
-// Background image
-var bgReady = false;
-var bgImage = new Image();
-bgImage.onload = function () {
-	bgReady = true;
-};
-bgImage.src = "images/background.png";
+	var game = {
+		canvas: false,
+		canvasContext: false,
+		hero: {
+			imgReady: false,
+			img: false,
+			speed: 256,
+			monstersCaught: 0,
+			x: 0,
+			y: 0
+		},
+		monster: {
+			imgReady: false,
+			img: false,
+			x: 0,
+			y: 0
+		},
+		images: {
+			bg: {
+				imgReady: false,
+				img: false
+			}
+		},
+		requestAnimationFrame: false,
+		pauseGame: false,
+		lastRefresh: false,
+		initialize: function() {
+			// Create the canvas
+			this.canvas = document.createElement("canvas");
+			this.canvasContext = this.canvas.getContext("2d");
+			this.canvas.width = 512;
+			this.canvas.height = 480;
+			document.body.appendChild(this.canvas);
 
-// Hero image
-var heroReady = false;
-var heroImage = new Image();
-heroImage.onload = function () {
-	heroReady = true;
-};
-heroImage.src = "images/hero.png";
+			// Background image
+			this.images.bg.img = new Image();
+			this.images.bg.img.onload = function() {
+				game.images.bg.imgReady = true;
+			};
+			this.images.bg.img.src = "images/background.png";
 
-// Monster image
-var monsterReady = false;
-var monsterImage = new Image();
-monsterImage.onload = function () {
-	monsterReady = true;
-};
-monsterImage.src = "images/monster.png";
+			// Hero image
+			this.hero.img = new Image();
+			this.hero.img.onload = function () {
+				game.hero.imgReady = true;
+			};
+			this.hero.img.src = "images/hero.png";
 
-// Game objects
-var hero = {
-	speed: 256 // movement in pixels per second
-};
-var monster = {};
-var monstersCaught = 0;
+			// Monster image
+			this.monster.img = new Image();
+			this.monster.img.onload = function () {
+				game.monster.imgReady = true;
+			};
+			this.monster.img.src = "images/monster.png";
 
-// Handle keyboard controls
-var keysDown = {};
+			// Cross-browser support for requestAnimationFrame
+			var w = window;
+			this.requestAnimationFrame = w.requestAnimationFrame || w.webkitRequestAnimationFrame || w.msRequestAnimationFrame || w.mozRequestAnimationFrame;
+		},
+		// The main game loop
+		main: function() {
+			if( !game.canvas ) {
+				if( !game.lastRefresh ) {
+					game.lastRefresh = Date.now();
+				}
+				game.initialize();
+				game.reset();
+			}
 
-addEventListener("keydown", function (e) {
-	keysDown[e.keyCode] = true;
-}, false);
+			var now = Date.now();
+			var delta = now - game.lastRefresh;
 
-addEventListener("keyup", function (e) {
-	delete keysDown[e.keyCode];
-}, false);
+			game.update(delta / 1000);
+			game.render();
 
-// Reset the game when the player catches a monster
-var reset = function () {
-	hero.x = canvas.width / 2;
-	hero.y = canvas.height / 2;
+			game.lastRefresh = now;
 
-	// Throw the monster somewhere on the screen randomly
-	monster.x = 32 + (Math.random() * (canvas.width - 64));
-	monster.y = 32 + (Math.random() * (canvas.height - 64));
-};
+			// Request to do this again ASAP
+			if( game.requestAnimationFrame ) {
+				if( !game.pauseGame ) {
+					game.requestAnimationFrame.call(window, game.main);
+				}
+			}
+		},
+		// Draw everything
+		render: function() {
+			if (this.images.bg.imgReady) {
+				this.canvasContext.drawImage(this.images.bg.img, 0, 0);
+			}
 
-// Update game objects
-var update = function (modifier) {
-	if (38 in keysDown) { // Player holding up
-		hero.y -= hero.speed * modifier;
-	}
-	if (40 in keysDown) { // Player holding down
-		hero.y += hero.speed * modifier;
-	}
-	if (37 in keysDown) { // Player holding left
-		hero.x -= hero.speed * modifier;
-	}
-	if (39 in keysDown) { // Player holding right
-		hero.x += hero.speed * modifier;
-	}
+			if (this.hero.imgReady) {
+				this.canvasContext.drawImage(this.hero.img, this.hero.x, this.hero.y);
+			}
 
-	// Are they touching?
-	if (
-		hero.x <= (monster.x + 32)
-		&& monster.x <= (hero.x + 32)
-		&& hero.y <= (monster.y + 32)
-		&& monster.y <= (hero.y + 32)
-	) {
-		++monstersCaught;
-		reset();
-	}
-};
+			if (this.monster.imgReady) {
+				this.canvasContext.drawImage(this.monster.img, this.monster.x, this.monster.y);
+			}
 
-// Draw everything
-var render = function () {
-	if (bgReady) {
-		ctx.drawImage(bgImage, 0, 0);
-	}
+			// Score
+			this.canvasContext.fillStyle = "rgb(250, 250, 250)";
+			this.canvasContext.font = "24px Helvetica";
+			this.canvasContext.textAlign = "left";
+			this.canvasContext.textBaseline = "top";
+			this.canvasContext.fillText("Goblins caught: " + this.hero.monstersCaught, 32, 32);
 
-	if (heroReady) {
-		ctx.drawImage(heroImage, hero.x, hero.y);
-	}
+			if( game.pauseGame ) {
+				console.log("PAUSED");
+				game.canvasContext.fillStyle = "#000000";
+				game.canvasContext.fillText("PAUSED", (game.canvas.width / 2) - 32, game.canvas.height / 2);
+				// return false;
+			}
+		},
+		// Update game objects
+		update: function( modifier ) {
+			if( this.hero.x <= this.canvas.offsetLeft ) {
+				this.hero.x += 1;
+				return false;
+			}
+			if( this.hero.x >= (this.canvas.width - this.canvas.offsetLeft - this.hero.img.width) ) {
+				this.hero.x -= 1;
+				return false;
+			}
+			if( this.hero.y <= this.canvas.offsetTop ) {
+				this.hero.y += 1;
+				return false;
+			}
+			if( this.hero.y >= (this.canvas.height - this.canvas.offsetTop - this.hero.img.height) ) {
+				this.hero.y -= 1;
+				return false;
+			}
 
-	if (monsterReady) {
-		ctx.drawImage(monsterImage, monster.x, monster.y);
-	}
+			if (38 in keysDown) { // Player holding up
+				this.hero.y -= this.hero.speed * modifier;
+			}
+			if (40 in keysDown) { // Player holding down
+				this.hero.y += this.hero.speed * modifier;
+			}
+			if (37 in keysDown) { // Player holding left
+				this.hero.x -= this.hero.speed * modifier;
+			}
+			if (39 in keysDown) { // Player holding right
+				this.hero.x += this.hero.speed * modifier;
+			}
 
-	// Score
-	ctx.fillStyle = "rgb(250, 250, 250)";
-	ctx.font = "24px Helvetica";
-	ctx.textAlign = "left";
-	ctx.textBaseline = "top";
-	ctx.fillText("Goblins caught: " + monstersCaught, 32, 32);
-};
+			// Are they touching?
+			if (
+				this.hero.x <= (this.monster.x + 32) &&
+				this.monster.x <= (this.hero.x + 32) &&
+				this.hero.y <= (this.monster.y + 32) &&
+				this.monster.y <= (this.hero.y + 32)
+			) {
+				++this.hero.monstersCaught;
+				this.reset();
+			}
+		},
+		// Reset the game when the player catches a monster
+		reset: function() {
+			if (this.canvas) {
+				this.hero.x = this.canvas.width / 2;
+				this.hero.y = this.canvas.height / 2;
 
-// The main game loop
-var main = function () {
-	var now = Date.now();
-	var delta = now - then;
+				// Throw the monster somewhere on the screen randomly
+				this.monster.x = 32 + (Math.random() * (this.canvas.width - 64));
+				this.monster.y = 32 + (Math.random() * (this.canvas.height - 64));
+			}
+		}
+	};
 
-	update(delta / 1000);
-	render();
+	// Handle keyboard controls
+	var keysDown = {};
 
-	then = now;
+	addEventListener("keydown", function (e) {
+		if( e.keyCode == 27 ) {
+			game.pauseGame = !game.pauseGame;
+			if( !game.pauseGame ) {
+				// unpause
+				game.main();
+			}
+		}
 
-	// Request to do this again ASAP
-	requestAnimationFrame(main);
-};
+		if( !game.pauseGame ) {
+			keysDown[e.keyCode] = true;
+		}
+	}, false);
 
-// Cross-browser support for requestAnimationFrame
-var w = window;
-requestAnimationFrame = w.requestAnimationFrame || w.webkitRequestAnimationFrame || w.msRequestAnimationFrame || w.mozRequestAnimationFrame;
+	addEventListener("keyup", function (e) {
+		delete keysDown[e.keyCode];
+	}, false);
 
-// Let's play this game!
-var then = Date.now();
-reset();
-main();
+	// Let's play this game!
+	game.main();
+})();
