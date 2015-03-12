@@ -13,5 +13,6 @@ Build your first HTML5 Canvas game in no time! [Read the whole article here.](ht
 Edited by: haykuro (https://github.com/haykuro)
 
 Changes:
+* Refactored code to be strict.
 * Pause with ESC.
 * Canvas border detection.
