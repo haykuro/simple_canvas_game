@@ -6,10 +6,12 @@ Build your first HTML5 Canvas game in no time! [Read the whole article here.](ht
 * Listen to [Lostcast](http://www.lostdecadegames.com/lostcast/), the indie game dev podcast
 * Follow us [@LostDecadeGames](https://twitter.com/LostDecadeGames)
 
+#[Try the game](https://raw.githack.com/haykuro/simple_canvas_game/master/index.html)
+
 ---
 
 Edited by: haykuro (https://github.com/haykuro)
 
 Changes:
 * Pause with ESC.
-* Border HIT detection.
+* Canvas border detection.
